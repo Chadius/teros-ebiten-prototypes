@@ -1,6 +1,7 @@
 package mapscroll
 
 import (
+	"fmt"
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/ebitenutil"
 	"log"
@@ -16,6 +17,9 @@ type MapScrollGame struct {
 }
 
 func (m *MapScrollGame) Draw(screen *ebiten.Image) {
+	mouseX, mouseY := ebiten.CursorPosition()
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("mouseXY(%d, %d) cameraXY(%d, %d)", mouseX, mouseY, cameraX, cameraY))
+
 	m.drawMap(screen)
 }
 
@@ -23,7 +27,7 @@ func (m *MapScrollGame) drawMap(screen *ebiten.Image) {
 	for _, tile := range mapTiles {
 		tileOp := &ebiten.DrawImageOptions{}
 		tileWorldX, tileWorldY := m.convertMapToWorldCoordinate(tile.q, tile.r)
-		screenX, screenY := m.convertWorldToScreenCoordinates(tileWorldX, tileWorldY, screen)
+		screenX, screenY := m.convertWorldToScreenCoordinates(tileWorldX, tileWorldY, float64(cameraX), float64(cameraY), screen)
 		tileOp.GeoM.Translate(screenX-48, screenY-48)
 		screen.DrawImage(tile.tilePic, tileOp)
 	}
@@ -39,11 +43,11 @@ func (m *MapScrollGame) convertMapToWorldCoordinate(q, r int) (float64, float64)
 	return xPos * 96, yPos * 96
 }
 
-func (m *MapScrollGame) convertWorldToScreenCoordinates(x, y float64, screen *ebiten.Image) (float64, float64) {
-	cameraX := float64(screen.Bounds().Max.X / 2)
-	cameraY := float64(screen.Bounds().Max.Y / 2)
+func (m *MapScrollGame) convertWorldToScreenCoordinates(x, y, camX, camY float64, screen *ebiten.Image) (float64, float64) {
+	screenCenterX := float64(screen.Bounds().Max.X/2) - camX
+	screenCenterY := float64(screen.Bounds().Max.Y/2) - camY
 
-	return cameraX + x, cameraY + y
+	return screenCenterX + x, screenCenterY + y
 }
 
 func (m *MapScrollGame) Layout(outsideWidth int, outsideHeight int) (screenWidth int, screenHeight int) {
@@ -51,12 +55,72 @@ func (m *MapScrollGame) Layout(outsideWidth int, outsideHeight int) (screenWidth
 }
 
 func (m *MapScrollGame) Update(screen *ebiten.Image) error {
+	mouseX, mouseY := ebiten.CursorPosition()
+	slowScrollSpeed := 1
+	fastScrollSpeed := 4
+
+	cameraX = m.scrollIfNearEdge(
+		screen.Bounds().Size().X*5/100,
+		screen.Bounds().Size().X*10/100,
+		mouseX,
+		cameraX,
+		fastScrollSpeed,
+		slowScrollSpeed,
+		false)
+
+	cameraX = m.scrollIfNearEdge(
+		screen.Bounds().Size().X*95/100,
+		screen.Bounds().Size().X*90/100,
+		mouseX,
+		cameraX,
+		fastScrollSpeed,
+		slowScrollSpeed,
+		true)
+
+	cameraY = m.scrollIfNearEdge(
+		screen.Bounds().Size().Y*5/100,
+		screen.Bounds().Size().Y*10/100,
+		mouseY,
+		cameraY,
+		fastScrollSpeed,
+		slowScrollSpeed,
+		false)
+
+	cameraY = m.scrollIfNearEdge(
+		screen.Bounds().Size().Y*95/100,
+		screen.Bounds().Size().Y*90/100,
+		mouseY,
+		cameraY,
+		fastScrollSpeed,
+		slowScrollSpeed,
+		true)
+
+	// TODO Cap camera based on map size
 	return nil
+}
+
+func (m *MapScrollGame) scrollIfNearEdge(marginThresholdFast, marginThresholdSlow, mousePos, cameraPos, fastScrollSpeed, slowScrollSpeed int, scrollDirectionIsPositive bool) int {
+	if scrollDirectionIsPositive == false {
+		if mousePos < marginThresholdFast {
+			return cameraPos - fastScrollSpeed
+		} else if mousePos < marginThresholdSlow {
+			return cameraPos - slowScrollSpeed
+		}
+	} else {
+		if mousePos > marginThresholdFast {
+			return cameraPos + fastScrollSpeed
+		} else if mousePos > marginThresholdSlow {
+			return cameraPos + slowScrollSpeed
+		}
+	}
+	return cameraPos
 }
 
 var greenTile *ebiten.Image
 var roadTile *ebiten.Image
 var mapTiles []mapTile
+
+var cameraX, cameraY int
 
 func init() {
 	var err error
@@ -83,4 +147,7 @@ func init() {
 			tilePic: greenTile,
 		},
 	}
+
+	cameraX = 10
+	cameraY = 100
 }
