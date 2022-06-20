@@ -20,17 +20,12 @@ Hex grids have two axes:
 - q direction is from left to right. Positive values move right.
 - r direction is diagonal, from up-left to down-right. Positive values move down-right.
 
+## mapscroll
+Scroll the screen around the map by moving the mouse around the edge.
+There are two scroll speeds based on getting close to 10% near the edge and again near 5%.
+Also loads all tiles onto the screen.
+
 # Planned demo notes
-
-### 2) Scrolling Image
-
-Scroll by moving the mouse near the edges of the screen.
-
-You should be able to move the camera around.
-
-The first pass will just show the cameras coordinates in debug test.
-
-The second pass will superimpose some large picture so you can see the scroll in action.
 
 ### 3) UI Widgets
 
@@ -61,3 +56,5 @@ Make a prototype for dialogue:
 - Click once to get to the bottom of the message and skip the scrolling.
 - Play sound effects while the text is scrolling, to represent them talking.
 
+### 6) Map Loader
+Get some kind of input that lets you load the entire map.
